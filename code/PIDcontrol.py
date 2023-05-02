@@ -86,29 +86,37 @@ if __name__ == '__main__':
 
     #Parameters of control
     w_ref = 1
-    kp = 3
-    ki = 15
-    kd = 0.1
 
     #Simulation
     physical_params = [J, b, Kt, Ke, R, L]
     simulation_params = [euler_step, Nt_step, dt]
-    control_params = [w_ref, kp, ki, kd]
-    tt, w, i, theta = evolution(*simulation_params, physical_params, *control_params)
+    control_params_P = [w_ref, 3, 0, 0]       #w_ref, kp, ki, kd
+    control_params_PI = [w_ref, 3, 15, 0]
+    control_params_PID = [w_ref, 5, 2, 0.5]
+    tt_P, w_P, i_P, theta_P = evolution(*simulation_params, physical_params, *control_params_P)
+    tt_PI, w_PI, i_PI, theta_PI = evolution(*simulation_params, physical_params, *control_params_PI)
+    tt_PID, w_PID, i_PID, theta_PID = evolution(*simulation_params, physical_params, *control_params_PID)
 
     #save data
     #np.savetxt('../data/PIDcontrol_kd0.1.txt', w, fmt='%.5f')
 
     #--------------------------Plot results----------------------#
-    plt.title('P-control for DC motor')
+    plt.rc('font', size=12)
+    plt.figure(figsize=(10, 6))
+    plt.title('System control for DC motor')
     plt.xlabel('Time [s]')
     plt.ylabel('$\omega$ [rad/s]')
     plt.grid(True)
     plt.minorticks_on()
-    plt.plot(tt, w, linestyle='-', linewidth=1.8, marker='')
+
+    plt.axhline(y=w_ref, linestyle=':', color='red', linewidth=1.3, label='$\omega_{ref}$ = %d rad/s' % w_ref)
+    #plt.plot(tt_P, w_P, linestyle='-', linewidth=1.3, marker='', color='blue', label='P control')
+    #plt.plot(tt_PI, w_PI, linestyle='-', linewidth=1.3, marker='', color='purple', label='PI control')
+    plt.plot(tt_PID, w_PID, linestyle='-', linewidth=1.3, marker='', color='green', label='PID control')
+    plt.legend()
 
     # save the plot in the results dir
-    out_name = os.path.join(results_dir, "testPcontrol.png")
-    #plt.savefig(out_name)
+    out_name = os.path.join(results_dir, "PIDcontrol_better.png")
+    plt.savefig(out_name)
     plt.show()
 
