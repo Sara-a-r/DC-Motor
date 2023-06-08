@@ -18,7 +18,7 @@ def euler_step(u, F, dt, *params):
 
 
 # -----------------Right Hand Side: FSF control--------------------#
-def F(u, J, b, Kt, Ke, R, L, K, r, N):
+def F(u, J, b, Kt, Ke, R, L, K, r, N, epsilon, w_n, p):
     # define A and B matrices of the system
     a11 = -b / J
     a12 = Kt / J
@@ -35,9 +35,9 @@ def F(u, J, b, Kt, Ke, R, L, K, r, N):
     B = np.array((0, beta, 0))
 
     # FSF parameters
-    k2 = (26 + a22 + a11) / beta
-    k1 = (315 + a11 * beta * k2 + a13 * a31 + a21 * a12) / (a12 * beta)
-    k3 = (1352 - a13 * a22 * a31 + a13 * beta * k2 * a31) / (a12 * beta * a31)
+    k2 = ((2*epsilon*w_n - p) + a22 + a11) / beta
+    k1 = ((w_n**2-2*p*epsilon*w_n) + a11 * beta * k2 + a13 * a31 + a21 * a12) / (a12 * beta)
+    k3 = ((-p*w_n**2) - a13 * a22 * a31 + a13 * beta * k2 * a31) / (a12 * beta * a31)
 
     K = np.array((k1, k2, k3))
 
@@ -45,7 +45,7 @@ def F(u, J, b, Kt, Ke, R, L, K, r, N):
 
 
 # --------------------------Temporal evolution----------------------#
-def evolution(int_method, Nt_step, dt, physics_params, control_params):
+def evolution(int_method, Nt_step, dt, physics_params, control_params, pole_params):
     # -----------------Initialize the problem-------------------#
     tmax = dt * Nt_step  # total time of simulation
     tt = np.arange(0, tmax, dt)  # temporal grid
@@ -59,7 +59,7 @@ def evolution(int_method, Nt_step, dt, physics_params, control_params):
     theta = []  # initialize list of theta value
     t = 0
     for t in tt:
-        u_t = int_method(u_t, F, dt, *physics_params, *control_params)  # step n+1
+        u_t = int_method(u_t, F, dt, *physics_params, *control_params, *pole_params)  # step n+1
         w.append(u_t[0])
         i.append(u_t[1])
         theta.append(u_t[2])
@@ -82,28 +82,42 @@ if __name__ == '__main__':
 
     # control parameters
     r = 1  # theta ref
-    N = 13.5  # factor for scaling the input
+    N = 8  # factor for scaling the input
+
+    # parameters for desired poles
+    p = -8        # real pole
+    sigma = 9     # real part of pole
+    w_d = 20       # imaginary part of pole
+    epsilon = 0.9 # damping coeff
+
+    ts = 4.6 / sigma         #settling time
+    w_n = sigma / epsilon    #natural frequence
+    tr = N * 1.8 / w_n       #rise time
 
     # Simulation
+    pole_params = [epsilon, w_n, p]
     physical_params = [J, b, Kt, Ke, R, L, K]
     control_params = [r, N]
     simulation_params = [euler_step, Nt_step, dt]
-    tt, w, i, theta = evolution(*simulation_params, physical_params, control_params)
+    tt, w, i, theta = evolution(*simulation_params, physical_params, control_params, pole_params)
+
+    Mp = np.max(theta)*N - r / 100
 
     # --------------------------Plot results----------------------#
     plt.rc('font', size=12)
     plt.figure(figsize=(10, 6))
-    plt.title('FSF control DC motor and spring')
+    plt.title(r't$_s$=%.1fs,   t$_r$=%.1fs,   $\xi$=%.1f,   $\omega_n$=%.1frad/s,    (poles : p$_{1,2}$=-%d$\pm$%d,  p$_3$=%d)'
+              % (ts, tr, epsilon, w_n, sigma, w_d, p))
     plt.xlabel('Time [s]')
-    plt.ylabel('$\Theta$ [rad]')
+    plt.ylabel(r'$\Theta$ [rad]')
     plt.grid(True)
     plt.minorticks_on()
 
-    plt.axhline(y=r, linestyle=':', color='red', linewidth=1.3, label='$\Theta_{ref}$ = %.1f rad' % r)
+    plt.axhline(y=r, linestyle=':', color='red', linewidth=1.3, label=r'$\Theta_{ref}$ = %.1f rad' % r)
     plt.plot(tt, theta, linestyle='-', linewidth=1.4, marker='', label='FSF control')
     plt.legend()
 
     #save the plot in the results dir
-    out_name = os.path.join(results_dir, "FSF_DCmotorK.png")
-    plt.savefig(out_name)
+    #out_name = os.path.join(results_dir, "FSF_DCmotorK.png")
+    #plt.savefig(out_name)
     plt.show()
