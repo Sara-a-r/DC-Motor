@@ -18,7 +18,7 @@ def FSF_AR_model(y, A, B, K, N, r):
 
 
 # -----------------Matrices of the system--------------------#
-def matrix(dt, J, b, Kt, Ke, R, L, K, p, sigma, wd):
+def matrix(dt, J, b, Kt, Ke, R, L, K, p, wn, epsilon):
     # define A and B matrices of the system
     a11 = 1 - dt * b / J
     a12 = dt * Kt / J
@@ -35,9 +35,13 @@ def matrix(dt, J, b, Kt, Ke, R, L, K, p, sigma, wd):
     B = np.array((0, beta, 0))
 
     # FSF parameters
-    k2 = ((-2*sigma-p) + a22 + a11 + a33) / beta
-    k1 = ((2*sigma*p+sigma**2+wd**2) - a11 * a22 + a11 * beta * k2 - a22 * a33 + beta * k2 * a33 - a11 * a33 + a13 * a31 + a21 * a12) / (a12 * beta)
-    k3 = ((-p*sigma**2-p*wd**2) + a11 * a22 * a33 - a11 * a33* beta * k2 - a13 * a22 * a31 + a13 * beta * k2 * a31 - a33 * a12 * a21 + a12 * beta * k1 * a33) / (a12 * beta * a31)
+    gamma1 = -2*np.cos(wn*np.sqrt(1-epsilon**2)*dt)*np.exp(-wn*epsilon*dt)-np.exp(p*dt)
+    gamma2 = np.exp(-2*wn*epsilon*dt)-2*np.cos(wn*np.sqrt(1-epsilon**2)*dt)*np.exp(-wn*epsilon*dt+p*dt)
+    gamma3 = np.exp(-2*wn*epsilon*dt+p*dt)
+
+    k2 = (gamma1 + a22 + a11 + a33) / beta
+    k1 = (gamma2 - a11 * a22 + a11 * beta * k2 - a22 * a33 + beta * k2 * a33 - a11 * a33 + a13 * a31 + a21 * a12) / (a12 * beta)
+    k3 = (gamma3 + a11 * a22 * a33 - a11 * a33* beta * k2 - a13 * a22 * a31 + a13 * beta * k2 * a31 - a33 * a12 * a21 + a12 * beta * k1 * a33) / (a12 * beta * a31)
 
     K = np.array((k1, k2, k3))
 
@@ -74,8 +78,8 @@ def evolution(evol_method, Nt_step, dt, physical_params, control_params, pole_pa
 
 if __name__ == '__main__':
     # Parameters of the simulation
-    Nt_step = 10e3  # temporal steps
-    dt = 1e-3  # temporal step size
+    Nt_step = 5e2  # temporal steps
+    dt = 1e-2  # temporal step size
     # Parameters of the system
     J = 0.01  # rotor's inertia [kg m^2]
     b = 0.001  # viscous friction coefficient [N m s]
@@ -86,27 +90,28 @@ if __name__ == '__main__':
     K = 0.5  # spring constant [N/m]
 
     # control parameters
-    r = 1  # theta ref
-    N = 10  # factor for scaling the input
+    r = 0.5  # theta ref
+    N = 4050  # factor for scaling the input
 
     # parameters for desired poles
-    p = 1        # real pole
-    sigma = 0.1    # real part of pole
-    wd = 0.1    # imaginary part of pole
-    epsilon = 0.7
+    p = -8                                 #real pole
+    epsilon = 0.6                        #damping coefficient
+    wn = 7*np.pi/(10*dt)                       #natural frequency
+    sigma = wn * epsilon                  #real part of pole
+    wd = wn * np.sqrt( 1 - epsilon**2)    #imaginary part of pole
 
     # Simulation
-    pole_params = [p, sigma, wd]
+    pole_params = [p, wn, epsilon]
     physical_params = [J, b, Kt, Ke, R, L, K]
     control_params = [N, r]
     simulation_params = [FSF_AR_model, Nt_step, dt]
     tt, w, i, theta = evolution(*simulation_params, physical_params, control_params, pole_params)
 
     # --------------------------Plot results----------------------#
-    plt.rc('font', size=12)
+    plt.rc('font', size=13)
     plt.figure(figsize=(10, 6))
-    plt.title(r'$\xi$=%.1f, (poles : p$_{1,2}$=-%d$\pm$%d,  p$_3$=%d)'
-              % (epsilon, sigma, wd, p))
+    plt.title(r'$\xi$=%.1f, $\omega_n=%.1f$, (poles s-plane: p$_{1,2}$=-%.1f$\pm$%.1f,  p$_3$=%d)'
+              % (epsilon, wn, sigma, wd, p))
     plt.xlabel('Time [s]')
     plt.ylabel(r'$\Theta$ [rad]')
     plt.grid(True)
