@@ -36,8 +36,8 @@ def matrix(dt, J, b, Kt, Ke, R, L, K, p, wn, epsilon):
 
     # FSF parameters
     gamma1 = -2*np.cos(wn*np.sqrt(1-epsilon**2)*dt)*np.exp(-wn*epsilon*dt)-np.exp(p*dt)
-    gamma2 = np.exp(-2*wn*epsilon*dt)-2*np.cos(wn*np.sqrt(1-epsilon**2)*dt)*np.exp(-wn*epsilon*dt+p*dt)
-    gamma3 = np.exp(-2*wn*epsilon*dt+p*dt)
+    gamma2 = np.exp(-2*wn*epsilon*dt)+2*np.cos(wn*np.sqrt(1-epsilon**2)*dt)*np.exp(-wn*epsilon*dt+p*dt)
+    gamma3 = -np.exp(-2*wn*epsilon*dt+p*dt)
 
     k2 = (gamma1 + a22 + a11 + a33) / beta
     k1 = (gamma2 - a11 * a22 + a11 * beta * k2 - a22 * a33 + beta * k2 * a33 - a11 * a33 + a13 * a31 + a21 * a12) / (a12 * beta)
@@ -63,10 +63,9 @@ def evolution(evol_method, Nt_step, dt, physical_params, control_params, pole_pa
 
     A, B, K = matrix(dt, *physical_params, *pole_params)
 
-    print(K)
-    print(B)
-    print(A)
-    print(np.outer(B, K))
+    #print(K)
+    #print(B)
+    #print(A)
 
     for t in tt:
         y_t = evol_method(y_t, A, B, K, *control_params) #step n+1
@@ -78,7 +77,7 @@ def evolution(evol_method, Nt_step, dt, physical_params, control_params, pole_pa
 
 if __name__ == '__main__':
     # Parameters of the simulation
-    Nt_step = 5e2  # temporal steps
+    Nt_step = 3e2  # temporal steps
     dt = 1e-2  # temporal step size
     # Parameters of the system
     J = 0.01  # rotor's inertia [kg m^2]
@@ -91,14 +90,17 @@ if __name__ == '__main__':
 
     # control parameters
     r = 0.5  # theta ref
-    N = 4050  # factor for scaling the input
+    N = 112  # factor for scaling the input
 
     # parameters for desired poles
-    p = -8                                 #real pole
-    epsilon = 0.6                        #damping coefficient
-    wn = 7*np.pi/(10*dt)                       #natural frequency
-    sigma = wn * epsilon                  #real part of pole
-    wd = wn * np.sqrt( 1 - epsilon**2)    #imaginary part of pole
+    p = -5                                 #real pole
+    epsilon = 0.9                          #damping coefficient
+    wn = 1*np.pi/(5*dt)                    #natural frequency
+    sigma = wn * epsilon                   #real part of pole
+    wd = wn * np.sqrt( 1 - epsilon**2)     #imaginary part of pole
+    z1 = np.exp((-sigma + wd * 1j)*dt)     #pole in z plane
+    z2 = np.exp((-sigma - wd * 1j) * dt)   #pole in z plane
+    z3 = np.exp(p*dt)                      #real pole in z plane
 
     # Simulation
     pole_params = [p, wn, epsilon]
@@ -108,10 +110,12 @@ if __name__ == '__main__':
     tt, w, i, theta = evolution(*simulation_params, physical_params, control_params, pole_params)
 
     # --------------------------Plot results----------------------#
-    plt.rc('font', size=13)
+    plt.rc('font', size=12)
     plt.figure(figsize=(10, 6))
-    plt.title(r'$\xi$=%.1f, $\omega_n=%.1f$, (poles s-plane: p$_{1,2}$=-%.1f$\pm$%.1f,  p$_3$=%d)'
-              % (epsilon, wn, sigma, wd, p))
+    plt.title(r'$\xi$=%.1f, $\omega_n=%.1f$,   poles s-plane: p$_{1,2}$=-%.1f$\pm j$%.1f,  p$_3$=%d' "\n"
+              r'poles in z-plane: z$_{1,2}$=%.2f$\pm j$%.2f, z$_3$=%.2f'
+              % (epsilon, wn, sigma, wd, p, z1.real, z1.imag, z3), size=11)
+    #plt.semilogy(tt,theta)
     plt.xlabel('Time [s]')
     plt.ylabel(r'$\Theta$ [rad]')
     plt.grid(True)
