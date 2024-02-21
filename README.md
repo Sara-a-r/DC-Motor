@@ -14,4 +14,4 @@ This repository contains:
 
 DC motors are fundamental components in many applications, from robotics to industrial systems. Understanding how to control these motors is crucial for efficient and effective system performance. By practicing with these control systems, I aim to deepen my understanding and improve my skills in control system design.
 
-![alt text](https://github.com/Sara-a-r/DC-Motor/blob/main/figure/P_PI_PIDcontrol.png)
+<img src="[./images/logo.png](https://github.com/Sara-a-r/DC-Motor/blob/main/figure/P_PI_PIDcontrol.png)" width="200">
